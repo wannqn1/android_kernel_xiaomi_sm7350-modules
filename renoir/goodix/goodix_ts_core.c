@@ -2553,7 +2553,7 @@ int goodix_ts_stage2_init(struct goodix_ts_core *cd)
 	device_init_wakeup(&cd->pdev->dev, 1);
 	cd->panel_cookie = panel_event_notifier_register(
 		PANEL_EVENT_NOTIFICATION_PRIMARY,
-		PANEL_EVENT_NOTIFIER_CLIENT_PRIMARY_TOUCH, NULL,
+		PANEL_EVENT_NOTIFIER_CLIENT_PRIMARY_TOUCH, cd->bus->panel,
 		goodix_panel_event, cd);
 	if (IS_ERR(cd->panel_cookie))
 		ts_err("Cannot register panel notifier: %ld",

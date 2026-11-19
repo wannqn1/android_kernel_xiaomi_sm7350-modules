@@ -393,6 +393,7 @@ enum goodix_ic_bus_type {
 };
 
 struct goodix_bus_interface {
+	struct drm_panel *panel;
 	int bus_type;
 	struct device *dev;
 	int (*read)(struct device *dev, unsigned int addr,

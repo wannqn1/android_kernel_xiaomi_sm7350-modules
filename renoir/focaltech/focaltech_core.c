@@ -52,6 +52,7 @@
 #define FTS_SUSPEND_LEVEL 1     /* Early-suspend level */
 #endif
 #include "focaltech_core.h"
+#include "../panel.h"
 
 #ifdef FTS_XIAOMI_TOUCHFEATURE
 #include "xiaomi_touch.h"
@@ -2260,7 +2261,7 @@ static int fts_ts_probe_entry(struct fts_ts_data *ts_data)
 #if defined(CONFIG_DRM)
 	ts_data->panel_cookie = panel_event_notifier_register(
 		PANEL_EVENT_NOTIFICATION_PRIMARY,
-		PANEL_EVENT_NOTIFIER_CLIENT_PRIMARY_TOUCH, NULL,
+		PANEL_EVENT_NOTIFIER_CLIENT_PRIMARY_TOUCH, ts_data->panel,
 		fts_panel_event, ts_data);
 	if (IS_ERR(ts_data->panel_cookie))
 		FTS_ERROR("Unable to register panel notifier: %ld\n",
@@ -2545,6 +2546,7 @@ static int fts_ts_probe(struct spi_device *spi)
 	struct fts_ts_data *ts_data = NULL;
 
 	struct gpio_desc *panel_id;
+	struct drm_panel *panel;
 
 	panel_id = devm_gpiod_get(&spi->dev, "panel-id", GPIOD_IN);
 	if (IS_ERR(panel_id))
@@ -2553,6 +2555,11 @@ static int fts_ts_probe(struct spi_device *spi)
 	ret = gpiod_get_value_cansleep(panel_id);
 	if (ret)
 		return ret < 0 ? ret : -ENODEV;
+
+	panel = renoir_touch_panel(spi->dev.of_node);
+	if (IS_ERR(panel))
+		return dev_err_probe(&spi->dev, PTR_ERR(panel),
+				     "Waiting for a K9 panel\n");
 
 	FTS_INFO("Touch Screen(SPI BUS) driver prboe...");
 	spi->mode = SPI_MODE_0;
@@ -2573,6 +2580,7 @@ static int fts_ts_probe(struct spi_device *spi)
 
 	fts_data = ts_data;
 	ts_data->spi = spi;
+	ts_data->panel = panel;
 	ts_data->dev = &spi->dev;
 	ts_data->log_level = 1;
 	ts_data->poweroff_on_sleep = false;

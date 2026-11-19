@@ -21,6 +21,7 @@
 #include <linux/gpio/consumer.h>
 
 #include "goodix_ts_core.h"
+#include "../panel.h"
 #define TS_DRIVER_NAME			"gtx8_spi"
 
 #define SPI_TRANS_PREFIX_LEN	1
@@ -149,6 +150,7 @@ static int goodix_spi_probe(struct spi_device *spi)
 	int ret = 0;
 
 	struct gpio_desc *panel_id;
+	struct drm_panel *panel;
 
 	panel_id = devm_gpiod_get(&spi->dev, "panel-id", GPIOD_IN);
 	if (IS_ERR(panel_id))
@@ -157,6 +159,11 @@ static int goodix_spi_probe(struct spi_device *spi)
 	ret = gpiod_get_value_cansleep(panel_id);
 	if (ret <= 0)
 		return ret < 0 ? ret : -ENODEV;
+
+	panel = renoir_touch_panel(spi->dev.of_node);
+	if (IS_ERR(panel))
+		return dev_err_probe(&spi->dev, PTR_ERR(panel),
+				     "Waiting for a K9 panel\n");
 
 	ts_info("goodix spi probe in");
 
@@ -173,6 +180,7 @@ static int goodix_spi_probe(struct spi_device *spi)
 
 	goodix_spi_bus.bus_type = GOODIX_BUS_TYPE_SPI;
 	goodix_spi_bus.dev = &spi->dev;
+	goodix_spi_bus.panel = panel;
 	goodix_spi_bus.read = goodix_spi_read;
 	goodix_spi_bus.write = goodix_spi_write;
 	/* ts core device */

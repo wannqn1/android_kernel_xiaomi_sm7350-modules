@@ -274,6 +274,7 @@ struct fts_ts_data {
 #endif
 #if defined(CONFIG_DRM) || defined(CONFIG_FB)
 	struct notifier_block fb_notif;
+	struct drm_panel *panel;
 	void *panel_cookie;
 #elif defined(CONFIG_HAS_EARLYSUSPEND)
 	struct early_suspend early_suspend;
