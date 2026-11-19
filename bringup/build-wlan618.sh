@@ -1,18 +1,17 @@
 #!/bin/bash
-# Build redwood Wi-Fi (WCN6750 on the WPSS) against the 6.18 kernel in ~/r618/out:
-# the platform drivers (icnss2, cnss_utils, cnss_nl, cnss_prealloc,
-# wlan_firmware_service) and qcacld (wlan.ko, profile lahaina_gki_qca6750).
+# Build Qualcomm Wi-Fi platform drivers and qcacld against the 6.18 kernel.
+# Default to Redwood WCN6750. Select lahaina_gki_qca6490 for renoir PCIe WLAN.
 R=${R:-$HOME/r618}; K=$R/redwood-6.18-kernel; O=$R/out; V=$R/redwood-6.18-modules; W=$R/vb
 export PATH=${CLANG:-$HOME/tc/clang-r596125/bin}:$PATH
 MK="make -C $K O=$O ARCH=arm64 LLVM=1 LLVM_IAS=1 LOCALVERSION= ${PAHOLE:+PAHOLE=$PAHOLE} -j${JOBS:-$(nproc)}"
 rsync -a --delete $V/wlan/ $W/wlan/
 P=$W/wlan/platform
 profile=${WLAN_PROFILE:-lahaina_gki_qca6750}
-platform=CONFIG_ICNSS2=m
+platform=(CONFIG_ICNSS2=m CONFIG_ICNSS2_QMI=y)
 if [ "$profile" = lahaina_gki_qca6490 ]; then
-	platform=CONFIG_CNSS2=m
+	platform=(CONFIG_CNSS2=m CONFIG_CNSS2_QMI=y)
 fi
-$MK M=$P "$platform" CONFIG_ICNSS2_QMI=y CONFIG_CNSS2_QMI=y CONFIG_CNSS_UTILS=m CONFIG_CNSS_GENL=m \
+$MK M=$P "${platform[@]}" CONFIG_CNSS_UTILS=m CONFIG_CNSS_GENL=m \
 	CONFIG_WCNSS_MEM_PRE_ALLOC=m CONFIG_CNSS_QMI_SVC=m CONFIG_CNSS_OUT_OF_TREE=y \
 	KCFLAGS="-I$P/inc -I$P/cnss_utils -I$P/cnss2 -I$P/icnss2 -I$P/cnss_prealloc" modules > $W/wlanplat.log 2>&1
 echo "wlan platform rc=$?"
