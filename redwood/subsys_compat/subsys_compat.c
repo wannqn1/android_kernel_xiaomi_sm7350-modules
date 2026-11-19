@@ -43,7 +43,7 @@ struct subsys {
 	int tries;
 };
 
-static struct subsys subsystems[] = {
+static struct subsys redwood_subsystems[] = {
 	{ .name = "modem", .compat = "qcom,yupik-modem-pas", .node = "4080000.qcom,mss", .idx = 3 },
 	{ .name = "adsp", .compat = "qcom,yupik-adsp-pas", .node = "17300000.qcom,lpass", .idx = 0,
 	  .autoboot = true },
@@ -51,6 +51,17 @@ static struct subsys subsystems[] = {
 	  .autoboot = true },
 	{ .name = "wpss", .compat = "qcom,yupik-wpss-pas", .node = "soc:qcom,wpss@8a00000", .idx = 2 },
 };
+
+static struct subsys renoir_subsystems[] = {
+	{ .name = "modem", .compat = "qcom,lahaina-modem-pas", .node = "4080000.qcom,mss", .idx = 5 },
+	{ .name = "adsp", .compat = "qcom,lahaina-adsp-pas", .node = "3700000.qcom,lpass", .idx = 6,
+	  .autoboot = true },
+	{ .name = "cdsp", .compat = "qcom,lahaina-cdsp-pas", .node = "a300000.qcom,turing", .idx = 7,
+	  .autoboot = true },
+};
+
+static struct subsys *subsystems;
+static size_t num_subsystems;
 
 static dev_t devt;
 static struct class *subsys_class;
@@ -172,7 +183,7 @@ static void subsys_boot_work(struct work_struct *work)
 	bool again = false;
 	int i, ret;
 
-	for (i = 0; i < ARRAY_SIZE(subsystems); i++) {
+	for (i = 0; i < num_subsystems; i++) {
 		struct subsys *s = &subsystems[i];
 		struct rproc *rproc;
 
@@ -239,10 +250,18 @@ static int __init subsys_compat_init(void)
 
 	of_node_put(np);
 
+	if (of_machine_is_compatible("qcom,shima")) {
+		subsystems = renoir_subsystems;
+		num_subsystems = ARRAY_SIZE(renoir_subsystems);
+	} else {
+		subsystems = redwood_subsystems;
+		num_subsystems = ARRAY_SIZE(redwood_subsystems);
+	}
+
 	ret = bus_register(&subsys_bus);
 	if (ret)
 		return ret;
-	ret = alloc_chrdev_region(&devt, 0, ARRAY_SIZE(subsystems), "subsys");
+	ret = alloc_chrdev_region(&devt, 0, num_subsystems, "subsys");
 	if (ret)
 		goto err_bus;
 	subsys_class = class_create("subsys");
@@ -251,7 +270,7 @@ static int __init subsys_compat_init(void)
 		goto err_chrdev;
 	}
 
-	for (i = 0; i < ARRAY_SIZE(subsystems); i++) {
+	for (i = 0; i < num_subsystems; i++) {
 		struct subsys *s = &subsystems[i];
 
 		mutex_init(&s->lock);
@@ -282,7 +301,7 @@ static int __init subsys_compat_init(void)
 	return 0;
 
 err_chrdev:
-	unregister_chrdev_region(devt, ARRAY_SIZE(subsystems));
+	unregister_chrdev_region(devt, num_subsystems);
 err_bus:
 	bus_unregister(&subsys_bus);
 	return ret;
@@ -293,7 +312,7 @@ static void __exit subsys_compat_exit(void)
 	int i;
 
 	cancel_delayed_work_sync(&boot_work);
-	for (i = 0; i < ARRAY_SIZE(subsystems); i++) {
+	for (i = 0; i < num_subsystems; i++) {
 		struct subsys *s = &subsystems[i];
 
 		device_destroy(subsys_class, MKDEV(MAJOR(devt), i));
@@ -306,7 +325,7 @@ static void __exit subsys_compat_exit(void)
 			device_unregister(s->parent);
 	}
 	class_destroy(subsys_class);
-	unregister_chrdev_region(devt, ARRAY_SIZE(subsystems));
+	unregister_chrdev_region(devt, num_subsystems);
 	bus_unregister(&subsys_bus);
 }
 
