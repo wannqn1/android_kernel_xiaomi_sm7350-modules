@@ -2745,10 +2745,10 @@ static ssize_t goodix_fw_version_info_read(struct file *file, char __user *buf,
 	if (hw_ops->read_version) {
 		ret = hw_ops->read_version(goodix_core_data, &chip_ver);
 		if (!ret) {
-			cnt = snprintf(&k_buf[0], PAGE_SIZE,
+			cnt = scnprintf(k_buf, sizeof(k_buf),
 				"patch_pid:%s\n",
 				chip_ver.patch_pid);
-			cnt += snprintf(&k_buf[cnt], PAGE_SIZE,
+			cnt += scnprintf(k_buf + cnt, sizeof(k_buf) - cnt,
 				"patch_vid:%02x%02x%02x%02x\n",
 				chip_ver.patch_vid[0], chip_ver.patch_vid[1],
 				chip_ver.patch_vid[2], chip_ver.patch_vid[3]);
@@ -2758,7 +2758,7 @@ static ssize_t goodix_fw_version_info_read(struct file *file, char __user *buf,
 	if (hw_ops->get_ic_info) {
 		ret = hw_ops->get_ic_info(goodix_core_data, &goodix_core_data->ic_info, false);
 		if (!ret) {
-			cnt += snprintf(&k_buf[cnt], PAGE_SIZE,
+			cnt += scnprintf(k_buf + cnt, sizeof(k_buf) - cnt,
 				"config_version:%x\n", goodix_core_data->ic_info.version.config_version);
 		}
 	}
@@ -3188,3 +3188,4 @@ module_exit(goodix_ts_core_exit);
 MODULE_DESCRIPTION("Goodix Touchscreen Core Module");
 MODULE_AUTHOR("Goodix, Inc.");
 MODULE_LICENSE("GPL v2");
+MODULE_IMPORT_NS("ANDROID_GKI_VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver");

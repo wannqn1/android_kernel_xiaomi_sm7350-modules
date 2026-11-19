@@ -553,7 +553,7 @@ static int cnss_pci_smmu_fault_handler(struct iommu_domain *domain,
 static
 void cnss_register_iommu_fault_handler(struct cnss_pci_data *pci_priv)
 {
-	qcom_iommu_set_fault_handler(pci_priv->iommu_domain,
+	iommu_set_fault_handler(pci_priv->iommu_domain,
 				     cnss_pci_smmu_fault_handler, pci_priv);
 }
 
