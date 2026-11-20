@@ -1089,7 +1089,7 @@ static int __core_set_resource(struct iris_hfi_device *device,
 		struct cvp_resource_hdr *resource_hdr, void *resource_value)
 {
 	struct cvp_hfi_cmd_sys_set_resource_packet *pkt;
-	u8 packet[CVP_IFACEQ_VAR_SMALL_PKT_SIZE];
+	u8 packet[CVP_IFACEQ_VAR_SMALL_PKT_SIZE] __aligned(4) = {};
 	int rc = 0;
 
 	if (!device || !resource_hdr || !resource_value) {
@@ -1118,7 +1118,7 @@ static int __core_release_resource(struct iris_hfi_device *device,
 		struct cvp_resource_hdr *resource_hdr)
 {
 	struct cvp_hfi_cmd_sys_release_resource_packet *pkt;
-	u8 packet[CVP_IFACEQ_VAR_SMALL_PKT_SIZE];
+	u8 packet[CVP_IFACEQ_VAR_SMALL_PKT_SIZE] __aligned(4) = {};
 	int rc = 0;
 
 	if (!device || !resource_hdr) {
@@ -1930,7 +1930,7 @@ fail_alloc_queue:
 
 static int __sys_set_debug(struct iris_hfi_device *device, u32 debug)
 {
-	u8 packet[CVP_IFACEQ_VAR_SMALL_PKT_SIZE];
+	u8 packet[CVP_IFACEQ_VAR_SMALL_PKT_SIZE] __aligned(4) = {};
 	int rc = 0;
 	struct cvp_hfi_cmd_sys_set_property_packet *pkt =
 		(struct cvp_hfi_cmd_sys_set_property_packet *) &packet;
@@ -1950,7 +1950,7 @@ static int __sys_set_debug(struct iris_hfi_device *device, u32 debug)
 static int __sys_set_idle_indicator(struct iris_hfi_device *device,
 	bool enable)
 {
-	u8 packet[CVP_IFACEQ_VAR_SMALL_PKT_SIZE];
+	u8 packet[CVP_IFACEQ_VAR_SMALL_PKT_SIZE] __aligned(4) = {};
 	int rc = 0;
 	struct cvp_hfi_cmd_sys_set_property_packet *pkt =
 		(struct cvp_hfi_cmd_sys_set_property_packet *) &packet;
@@ -1963,7 +1963,7 @@ static int __sys_set_idle_indicator(struct iris_hfi_device *device,
 
 static int __sys_set_coverage(struct iris_hfi_device *device, u32 mode)
 {
-	u8 packet[CVP_IFACEQ_VAR_SMALL_PKT_SIZE];
+	u8 packet[CVP_IFACEQ_VAR_SMALL_PKT_SIZE] __aligned(4) = {};
 	int rc = 0;
 	struct cvp_hfi_cmd_sys_set_property_packet *pkt =
 		(struct cvp_hfi_cmd_sys_set_property_packet *) &packet;
@@ -1989,7 +1989,7 @@ static int __sys_set_power_control(struct iris_hfi_device *device,
 {
 	struct regulator_info *rinfo;
 	bool supported = false;
-	u8 packet[CVP_IFACEQ_VAR_SMALL_PKT_SIZE];
+	u8 packet[CVP_IFACEQ_VAR_SMALL_PKT_SIZE] __aligned(4) = {};
 	struct cvp_hfi_cmd_sys_set_property_packet *pkt =
 		(struct cvp_hfi_cmd_sys_set_property_packet *) &packet;
 
@@ -3984,7 +3984,7 @@ static void clock_config_on_enable_vpu5(struct iris_hfi_device *device)
 
 static int __set_ubwc_config(struct iris_hfi_device *device)
 {
-	u8 packet[CVP_IFACEQ_VAR_SMALL_PKT_SIZE];
+	u8 packet[CVP_IFACEQ_VAR_SMALL_PKT_SIZE] __aligned(4) = {};
 	int rc = 0;
 
 	struct cvp_hfi_cmd_sys_set_property_packet *pkt =

@@ -301,7 +301,7 @@ static int cvp_readjust_clock(struct msm_cvp_core *core,
 
 	core->curr_freq = ((avg_cycles * core->dyn_clk.sum_fps[i]) << 1)/3;
 	dprintk(CVP_PWR,
-		"%s - cycles tot %u, avg %u. sum_fps %u, cur_freq %u\n",
+		"%s - cycles tot %u, avg %u. sum_fps %u, cur_freq %lu\n",
 		__func__,
 		core->dyn_clk.cycle[i].total,
 		avg_cycles,
@@ -330,12 +330,12 @@ static int cvp_readjust_clock(struct msm_cvp_core *core,
 	}
 
 	dprintk(CVP_PWR,
-			"%s:%d - %d - Readjust to %u\n",
+			"%s:%d - %d - Readjust to %lu\n",
 			__func__, __LINE__, i, core->curr_freq);
 	rc = msm_cvp_set_clocks(core);
 	if (rc) {
 		dprintk(CVP_ERR,
-			"Failed to set clock rate %u: %d %s\n",
+			"Failed to set clock rate %lu: %d %s\n",
 			core->curr_freq, rc, __func__);
 		core->curr_freq = tmp;
 	} else {
@@ -348,7 +348,7 @@ static int cvp_readjust_clock(struct msm_cvp_core *core,
 			((lo_freq*3)>>1)/core->dyn_clk.sum_fps[i] : 0;
 
 		dprintk(CVP_PWR,
-			"%s - Readjust clk to %u. New lim [%d] hi %u lo %u\n",
+			"%s - Readjust clk to %lu. New lim [%d] hi %u lo %u\n",
 			__func__, core->curr_freq, i,
 			core->dyn_clk.hi_ctrl_lim[i],
 			core->dyn_clk.lo_ctrl_lim[i]);
@@ -901,12 +901,12 @@ static int adjust_bw_freqs(void)
 	min_bw = max_bw/100;
 
 	aggregate_power_update(core, &nrt_pwr, &rt_pwr, cvp_max_rate);
-	dprintk(CVP_PROF, "PwrUpdate nrt %u %u %lld rt %u %u %lld\n",
+	dprintk(CVP_PROF, "PwrUpdate nrt %lu %lu %lu rt %lu %lu %lu\n",
 		nrt_pwr.core_sum, nrt_pwr.op_core_sum, nrt_pwr.bw_sum,
 		rt_pwr.core_sum, rt_pwr.op_core_sum, rt_pwr.bw_sum);
 
 	if (rt_pwr.core_sum > cvp_max_rate) {
-		dprintk(CVP_WARN, "%s clk vote out of range %lld\n",
+		dprintk(CVP_WARN, "%s clk vote out of range %lu\n",
 			__func__, rt_pwr.core_sum);
 		return -ENOTSUPP;
 	}
@@ -934,7 +934,7 @@ static int adjust_bw_freqs(void)
 	bw_sum = (bw_sum > max_bw) ? max_bw : bw_sum;
 	bw_sum = (bw_sum < min_bw) ? min_bw : bw_sum;
 
-	dprintk(CVP_PROF, "%s %lld %lld\n", __func__,
+	dprintk(CVP_PROF, "%s %lu %lu\n", __func__,
 		core_sum, bw_sum);
 	if (!cl->has_scaling) {
 		dprintk(CVP_ERR, "Cannot scale CVP clock\n");
@@ -946,7 +946,7 @@ static int adjust_bw_freqs(void)
 	rc = msm_cvp_set_clocks(core);
 	if (rc) {
 		dprintk(CVP_ERR,
-			"Failed to set clock rate %u %s: %d %s\n",
+			"Failed to set clock rate %lu %s: %d %s\n",
 			core_sum, cl->name, rc, __func__);
 		core->curr_freq = tmp;
 		return rc;
@@ -964,7 +964,7 @@ static int adjust_bw_freqs(void)
 	hdev->clk_freq = core->curr_freq;
 	rc = icc_set_bw(bus->client, bw_sum, 0);
 	if (rc)
-		dprintk(CVP_ERR, "Failed voting bus %s to ab %u\n",
+		dprintk(CVP_ERR, "Failed voting bus %s to ab %lu\n",
 			bus->name, bw_sum);
 
 	return rc;
@@ -1282,6 +1282,7 @@ static int msm_cvp_session_ctrl(struct msm_cvp_inst *inst,
 		break;
 	case SESSION_CREATE:
 		rc = msm_cvp_session_create(inst);
+		fallthrough;
 	case SESSION_DELETE:
 		break;
 	case SESSION_INFO:
@@ -1459,7 +1460,7 @@ static int cvp_drain_fence_cmd_queue_partial(struct msm_cvp_inst *inst)
 	mutex_unlock(&q->lock);
 	wait_time = count * CVP_MAX_WAIT_TIME * 1000;
 
-	dprintk(CVP_SYNX, "%s: wait %d us for %d fence command\n",
+	dprintk(CVP_SYNX, "%s: wait %lu us for %d fence command\n",
 			__func__, wait_time, count);
 
 	count = 0;
@@ -1510,7 +1511,7 @@ static int cvp_drain_fence_sched_list(struct msm_cvp_inst *inst)
 	mutex_unlock(&q->lock);
 	wait_time = count * CVP_MAX_WAIT_TIME * 1000;
 
-	dprintk(CVP_SYNX, "%s: wait %d us for %d fence command\n",
+	dprintk(CVP_SYNX, "%s: wait %lu us for %d fence command\n",
 			__func__, wait_time, count);
 
 	count = 0;
@@ -1611,7 +1612,7 @@ static int cvp_flush_all(struct msm_cvp_inst *inst)
 	if (!s)
 		return -ECONNRESET;
 
-	dprintk(CVP_SESS, "session %llx (%#x)flush all starts\n",
+	dprintk(CVP_SESS, "session %pK (%#x) flush all starts\n",
 			inst, hash32_ptr(inst->session));
 	q = &inst->fence_cmd_queue;
 	hdev = inst->core->device;
@@ -1699,7 +1700,7 @@ static int cvp_flush_frame(struct msm_cvp_inst *inst, u64 frame_id)
 	if (!s)
 		return -ECONNRESET;
 
-	dprintk(CVP_SESS, "Session %llx, flush frame with id %llu\n",
+	dprintk(CVP_SESS, "Session %pK, flush frame with id %llu\n",
 			inst, frame_id);
 	q = &inst->fence_cmd_queue;
 

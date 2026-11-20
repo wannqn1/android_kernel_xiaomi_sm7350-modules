@@ -1271,7 +1271,7 @@ static int synx_handle_register_user_payload(
 		k_ioctl->size))
 		return -EFAULT;
 
-	pr_debug("user cb registration with payload %x\n",
+	pr_debug("user cb registration with payload %llx\n",
 		user_data.payload[0]);
 	rc = synx_register_callback(session_id, user_data.synx_obj,
 		synx_util_default_user_callback, (void *)user_data.payload[0]);
@@ -1499,7 +1499,7 @@ static ssize_t synx_read(struct file *filep,
 			__func__, client->id, data.synx_obj);
 fail:
 	synx_put_client(client);
-	pr_debug("[sess: %u] exit with status %d\n",
+	pr_debug("[sess: %u] exit with status %zd\n",
 		session->client_id, rc);
 
 	return rc;

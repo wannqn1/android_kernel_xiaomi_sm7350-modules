@@ -13,7 +13,7 @@
 #define CLEAR_USE_BITMAP(idx, inst) \
 	do { \
 		clear_bit(idx, &inst->dma_cache.usage_bitmap); \
-		dprintk(CVP_MEM, "clear %x bit %d dma_cache bitmap 0x%llx\n", \
+		dprintk(CVP_MEM, "clear %x bit %d dma_cache bitmap 0x%lx\n", \
 			hash32_ptr(inst->session), smem->bitmap_index, \
 			inst->dma_cache.usage_bitmap); \
 	} while (0)
@@ -21,7 +21,7 @@
 #define SET_USE_BITMAP(idx, inst) \
 	do { \
 		set_bit(idx, &inst->dma_cache.usage_bitmap); \
-		dprintk(CVP_MEM, "Set %x bit %d dma_cache bitmap 0x%llx\n", \
+		dprintk(CVP_MEM, "Set %x bit %d dma_cache bitmap 0x%lx\n", \
 			hash32_ptr(inst->session), idx, \
 			inst->dma_cache.usage_bitmap); \
 	} while (0)
@@ -38,14 +38,14 @@ void print_smem(u32 tag, const char *str, struct msm_cvp_inst *inst,
 			"%s: %x : %s size %d flags %#x iova %#x idx %d ref %d",
 			str, hash32_ptr(inst->session), smem->dma_buf->name,
 			smem->size, smem->flags, smem->device_addr,
-			smem->bitmap_index, smem->refcount);
+			smem->bitmap_index, atomic_read(&smem->refcount));
 	}
 }
 
 static void print_internal_buffer(u32 tag, const char *str,
 		struct msm_cvp_inst *inst, struct cvp_internal_buf *cbuf)
 {
-	if (!(tag & msm_cvp_debug) || !inst || !cbuf)
+	if (!(tag & msm_cvp_debug) || !inst || !cbuf || !cbuf->smem)
 		return;
 
 	if (cbuf->smem->dma_buf) {
@@ -56,7 +56,7 @@ static void print_internal_buffer(u32 tag, const char *str,
 		cbuf->smem->device_addr);
 	} else {
 		dprintk(tag,
-		"%s: %x : idx %2d fd %d off %d size %d iova %#x",
+		"%s: %x : fd %d off %d size %d iova %#x",
 		str, hash32_ptr(inst->session), cbuf->fd,
 		cbuf->offset, cbuf->size, cbuf->smem->device_addr);
 	}
@@ -146,7 +146,7 @@ int msm_cvp_map_buf_dsp(struct msm_cvp_inst *inst, struct cvp_kmd_buffer *buf)
 
 	smem->dma_buf = dma_buf;
 	smem->bitmap_index = MAX_DMABUF_NUMS;
-	dprintk(CVP_MEM, "%s: dma_buf = %llx\n", __func__, dma_buf);
+	dprintk(CVP_MEM, "%s: dma_buf = %pK\n", __func__, dma_buf);
 	rc = msm_cvp_map_smem(inst, smem, "map dsp");
 	if (rc) {
 		print_client_buffer(CVP_ERR, "map failed", inst, buf);
@@ -277,7 +277,7 @@ void msm_cvp_cache_operations(struct msm_cvp_smem *smem, u32 type,
 	}
 
 	dprintk(CVP_MEM,
-		"%s: cache operation enabled for dma_buf: %llx, cache_op: %d, offset: %d, size: %d\n",
+		"%s: cache operation enabled for dma_buf: %pK, cache_op: %d, offset: %d, size: %d\n",
 		__func__, smem->dma_buf, cache_op, offset, size);
 	msm_cvp_smem_cache_operations(smem->dma_buf, cache_op, offset, size);
 }

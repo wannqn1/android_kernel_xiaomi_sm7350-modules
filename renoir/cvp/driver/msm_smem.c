@@ -325,7 +325,7 @@ static int alloc_dma_mem(size_t size, u32 align, u32 flags, int map_kernel,
 	}
 
 	dprintk(CVP_MEM,
-		"%s: dma_buf = %pK, device_addr = %x, size = %d, kvaddr = %pK, ion_flags = %#x, flags = %#lx\n",
+		"%s: dma_buf = %pK, device_addr = %x, size = %d, kvaddr = %pK, ion_flags = %#x, flags = %#x\n",
 		__func__, mem->dma_buf, mem->device_addr, mem->size,
 		mem->kvaddr, mem->ion_flags, mem->flags);
 	return rc;
@@ -475,7 +475,7 @@ struct context_bank_info *msm_cvp_smem_get_context_bank(bool is_secure,
 
 	if (!match)
 		dprintk(CVP_ERR,
-			"%s: cb not found for ion_flags %x, is_secure %d\n",
+			"%s: cb not found for ion_flags %lx, is_secure %d\n",
 			__func__, ion_flags, is_secure);
 
 	return match;

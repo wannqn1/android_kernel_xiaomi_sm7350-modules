@@ -585,5 +585,6 @@ static void __exit msm_cvp_exit(void)
 module_init(msm_cvp_init);
 module_exit(msm_cvp_exit);
 
+MODULE_DESCRIPTION("Qualcomm Shima computer vision accelerator");
 MODULE_IMPORT_NS("DMA_BUF");
 MODULE_LICENSE("GPL v2");

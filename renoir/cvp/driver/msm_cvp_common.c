@@ -196,7 +196,7 @@ struct msm_cvp_inst *cvp_get_inst_validate(struct msm_cvp_core *core,
 
 	s = cvp_get_inst(core, session_id);
 	if (!s) {
-		dprintk(CVP_ERR, "%s session doesn't exit\n",
+		dprintk(CVP_ERR, "%pS: session does not exist\n",
 			__builtin_return_address(0));
 		return NULL;
 	}
@@ -660,7 +660,7 @@ static void handle_sys_error(enum hal_command_response cmd, void *data)
 	call_hfi_op(hdev, flush_debug_queue, hdev->hfi_device_data);
 	list_for_each_entry(inst, &core->instances, list) {
 		dprintk(CVP_WARN,
-			"%s: sys error inst %#x kref %x, cmd %x state %x\n",
+			"%s: sys error inst %pK kref %x, cmd %x state %x\n",
 				__func__, inst, kref_read(&inst->kref),
 				inst->cur_cmd_type, inst->state);
 		if (inst->state != MSM_CVP_CORE_INVALID) {
@@ -1282,23 +1282,28 @@ int msm_cvp_comm_try_state(struct msm_cvp_inst *inst, int state)
 		rc = msm_comm_init_core(inst);
 		if (rc || state <= get_flipped_state(inst->state, state))
 			break;
+		fallthrough;
 	case MSM_CVP_CORE_INIT_DONE:
 		rc = msm_comm_init_core_done(inst);
 		if (rc || state <= get_flipped_state(inst->state, state))
 			break;
+		fallthrough;
 	case MSM_CVP_OPEN:
 		rc = msm_comm_session_init(flipped_state, inst);
 		if (rc || state <= get_flipped_state(inst->state, state))
 			break;
+		fallthrough;
 	case MSM_CVP_OPEN_DONE:
 		rc = msm_comm_session_init_done(flipped_state, inst);
 		if (rc || state <= get_flipped_state(inst->state, state))
 			break;
+		fallthrough;
 	case MSM_CVP_CLOSE:
 		dprintk(CVP_INFO, "to CVP_CLOSE state\n");
 		rc = msm_comm_session_close(flipped_state, inst);
 		if (rc || state <= get_flipped_state(inst->state, state))
 			break;
+		fallthrough;
 	case MSM_CVP_CLOSE_DONE:
 		dprintk(CVP_INFO, "to CVP_CLOSE_DONE state\n");
 		rc = wait_for_state(inst, flipped_state, MSM_CVP_CLOSE_DONE,
@@ -1306,12 +1311,14 @@ int msm_cvp_comm_try_state(struct msm_cvp_inst *inst, int state)
 		if (rc || state <= get_flipped_state(inst->state, state))
 			break;
 		msm_cvp_comm_session_clean(inst);
+		fallthrough;
 	case MSM_CVP_CORE_UNINIT:
 	case MSM_CVP_CORE_INVALID:
 		dprintk(CVP_INFO, "Sending core uninit\n");
 		rc = msm_cvp_deinit_core(inst);
 		if (rc || state <= get_flipped_state(inst->state, state))
 			break;
+		fallthrough;
 	default:
 		dprintk(CVP_ERR, "State not recognized\n");
 		rc = -EINVAL;
@@ -1382,7 +1389,7 @@ void msm_cvp_ssr_handler(struct work_struct *work)
 		dprintk(CVP_ERR, "Session abort triggered\n");
 		list_for_each_entry(inst, &core->instances, list) {
 			dprintk(CVP_WARN,
-				"Session to abort: inst %#x cmd %x ref %x\n",
+				"Session to abort: inst %pK cmd %x ref %x\n",
 				inst, inst->cur_cmd_type,
 				kref_read(&inst->kref));
 			break;
