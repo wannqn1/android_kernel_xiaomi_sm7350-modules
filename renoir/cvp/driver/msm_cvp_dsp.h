@@ -119,6 +119,7 @@ int cvp_dsp_resume(uint32_t session_flag);
  * Flag to share details of session.
  */
 int cvp_dsp_shutdown(uint32_t session_flag);
+bool cvp_dsp_queue_is_shared(void);
 
 /*
  * API to register iova buffer address with CDSP

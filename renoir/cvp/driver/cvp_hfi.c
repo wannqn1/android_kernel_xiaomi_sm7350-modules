@@ -300,7 +300,7 @@ static int __set_clocks(struct iris_hfi_device *device, u32 freq);
 static int __iface_cmdq_write(struct iris_hfi_device *device,
 					void *pkt);
 static int __load_fw(struct iris_hfi_device *device);
-static void __unload_fw(struct iris_hfi_device *device);
+static int __unload_fw(struct iris_hfi_device *device);
 static int __tzbsp_set_cvp_state(enum tzbsp_subsys_state state);
 static int __enable_subcaches(struct iris_hfi_device *device);
 static int __set_subcaches(struct iris_hfi_device *device);
@@ -2028,6 +2028,11 @@ static int iris_hfi_core_init(void *device)
 
 	mutex_lock(&dev->lock);
 
+	if (dev->resources.fw.cookie) {
+		rc = -EBUSY;
+		goto err_no_mem;
+	}
+
 	dev->bus_vote.data =
 		kzalloc(sizeof(struct cvp_bus_vote_data), GFP_KERNEL);
 	if (!dev->bus_vote.data) {
@@ -2139,9 +2144,13 @@ static int iris_hfi_core_release(void *dev)
 	__resume(device);
 	__set_state(device, IRIS_STATE_DEINIT);
 
-	__dsp_shutdown(device, 0);
+	rc = __dsp_shutdown(device, 0);
+	if (rc)
+		goto unlock;
 
-	__unload_fw(device);
+	rc = __unload_fw(device);
+	if (rc)
+		goto unlock;
 
 	/* unlink all sessions from device */
 	list_for_each_entry_safe(session, next, &device->sess_head, list) {
@@ -2150,6 +2159,7 @@ static int iris_hfi_core_release(void *dev)
 	}
 
 	dprintk(CVP_CORE, "Core released successfully\n");
+unlock:
 	mutex_unlock(&device->lock);
 
 	return rc;
@@ -4353,21 +4363,30 @@ fail_init_res:
 	return rc;
 }
 
-static void __unload_fw(struct iris_hfi_device *device)
+static int __unload_fw(struct iris_hfi_device *device)
 {
+	int ret;
+
 	if (!device->resources.fw.cookie)
-		return;
+		return 0;
 
 	cancel_delayed_work(&iris_hfi_pm_work);
 	if (device->state != IRIS_STATE_DEINIT)
 		flush_workqueue(device->iris_pm_workq);
 
-	unload_cvp_fw_impl(device);
+	if (cvp_dsp_queue_is_shared())
+		return -EBUSY;
+
+	ret = unload_cvp_fw_impl(device);
+	if (ret)
+		return ret;
+
 	__interface_queues_release(device);
 	call_iris_op(device, power_off, device);
 	__deinit_resources(device);
 
 	dprintk(CVP_WARN, "Firmware unloaded\n");
+	return 0;
 }
 
 static int iris_hfi_get_fw_info(void *dev, struct cvp_hal_fw_info *fw_info)
@@ -4672,11 +4691,16 @@ static struct iris_hfi_device *__get_device(u32 device_id,
 void cvp_iris_hfi_delete_device(void *device)
 {
 	struct iris_hfi_device *dev = device;
+	int ret;
 
 	if (!dev)
 		return;
 
-	__unload_fw(dev);
+	cancel_delayed_work_sync(&iris_hfi_pm_work);
+	ret = __unload_fw(dev);
+	if (ret)
+		dev_err(&dev->res->pdev->dev,
+			"Retaining CVP DMA queues after shutdown failure: %d\n", ret);
 	free_irq(dev->cvp_hal_data->irq, dev);
 	destroy_workqueue(dev->cvp_workq);
 	destroy_workqueue(dev->iris_pm_workq);

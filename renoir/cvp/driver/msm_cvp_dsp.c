@@ -125,7 +125,7 @@ static int cvp_hyp_assign_to_dsp(uint64_t addr, uint32_t size)
 		}
 		me->addr = addr;
 		me->size = size;
-		me->hyp_assigned = true;
+		WRITE_ONCE(me->hyp_assigned, true);
 	}
 
 	return rc;
@@ -147,7 +147,7 @@ static int cvp_hyp_assign_from_dsp(void)
 		}
 		me->addr = 0;
 		me->size = 0;
-		me->hyp_assigned = false;
+		WRITE_ONCE(me->hyp_assigned, false);
 	}
 
 	return rc;
@@ -330,24 +330,26 @@ int cvp_dsp_shutdown(uint32_t session_flag)
 	cmd.type = CPU2DSP_SHUTDOWN;
 
 	mutex_lock(&me->lock);
-	if (READ_ONCE(me->state) == DSP_INVALID || kthread_should_stop())
+	if (!me->hyp_assigned)
 		goto exit;
 
-	me->state = DSP_INACTIVE;
-	rc = cvp_dsp_send_cmd_sync(&cmd, sizeof(struct cvp_dsp_cmd_msg), &rsp);
-	if (rc) {
-		dprintk(CVP_ERR,
-			"%s: cvp_dsp_send_cmd failed with rc = %d\n",
-			__func__, rc);
-		cvp_hyp_assign_from_dsp();
-		goto exit;
+	if (me->state != DSP_INVALID && me->chan) {
+		me->state = DSP_INACTIVE;
+		rc = cvp_dsp_send_cmd_sync(&cmd, sizeof(cmd), &rsp);
+		if (rc)
+			dprintk(CVP_ERR, "CDSP shutdown command failed: %d\n", rc);
 	}
 
+	/* SCM must revoke CDSP access before the queue can be freed. */
 	rc = cvp_hyp_assign_from_dsp();
 
 exit:
 	mutex_unlock(&me->lock);
 	return rc;
+}
+bool cvp_dsp_queue_is_shared(void)
+{
+	return READ_ONCE(gfa_cv.hyp_assigned);
 }
 
 int cvp_dsp_register_buffer(uint32_t session_id, uint32_t buff_fd,
@@ -849,7 +851,7 @@ int cvp_dsp_device_init(void)
 
 	mutex_init(&me->lock);
 	me->state = DSP_UNINIT;
-	me->hyp_assigned = false;
+	WRITE_ONCE(me->hyp_assigned, false);
 
 	for (i = 0; i <= CPU2DSP_MAX_CMD; i++)
 		init_completion(&me->completions[i]);
