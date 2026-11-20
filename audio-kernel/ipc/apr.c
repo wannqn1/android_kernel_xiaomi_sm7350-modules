@@ -27,6 +27,7 @@
 #include <linux/firmware/qcom/qcom_scm.h>
 #include <linux/version.h>
 #include <soc/snd_event.h>
+#include <soc/mmhardware.h>
 #include <dsp/apr_audio-v2.h>
 #include <dsp/audio_notifier.h>
 #include <ipc/apr.h>
@@ -328,6 +329,7 @@ static void apr_adsp_up(void)
 		pr_info("%s: Q6 is Up\n", __func__);
 		dev_info(apr_priv->dev, "M - ADSP Ready\n");
 		apr_set_q6_state(APR_SUBSYS_LOADED);
+		mmhardware_report(MM_HW_ADSP, "adsp");
 
 		spin_lock(&apr_priv->apr_lock);
 		if (!apr_children_added)

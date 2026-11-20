@@ -15,6 +15,7 @@
 #include <sound/soc.h>
 #include <sound/tlv.h>
 #include <soc/soundwire.h>
+#include <soc/mmhardware.h>
 #include <linux/regmap.h>
 #include <sound/soc.h>
 #include <sound/soc-dapm.h>
@@ -4487,6 +4488,7 @@ static int wcd938x_bind(struct device *dev)
 		goto err_irq;
 	}
 	wcd938x->dev_up = true;
+	mmhardware_report(MM_HW_CODEC, "codec");
 
 	return ret;
 err_irq:
