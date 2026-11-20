@@ -22,6 +22,7 @@ for t in $trees; do
 			> $W/mm-drivers/msm_ext_display/Kbuild
 		for d in msm_ext_display sync_fence hw_fence; do
 			$MK M=$W/mm-drivers/$d CONFIG_ARCH_LAHAINA=y CONFIG_ARCH_YUPIK=y \
+				SYNC_FENCE_ROOT=$W/mm-drivers/ MSM_HW_FENCE_ROOT=$W/mm-drivers/ \
 				CONFIG_MSM_EXT_DISPLAY=m CONFIG_QCOM_SPEC_SYNC=m CONFIG_QTI_HW_FENCE=m \
 				KCFLAGS="$FENCE" modules > $W/mm-$d.log 2>&1
 			echo "mm-drivers/$d rc=$?"
