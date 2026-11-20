@@ -5,6 +5,7 @@
  */
 
 #include <linux/module.h>
+#include <linux/of.h>
 #include <linux/soc/qcom/qmi.h>
 #include <linux/vmalloc.h>
 
@@ -875,11 +876,76 @@ static char *cnss_bdf_type_to_str(enum cnss_bdf_type bdf_type)
 	}
 }
 
+/* Xiaomi K9's stock driver selects the RF board data by bootloader HWID. */
+#define XIAOMI_PROJECT_K9		6
+#define XIAOMI_HWID_COUNTRY_SHIFT	20
+#define XIAOMI_COUNTRY_GLOBAL		1
+#define XIAOMI_COUNTRY_JAPAN		3
+
+static int cnss_read_bootarg_u32(const char *args, const char *key, u32 *value)
+{
+	const char *arg = args;
+	size_t key_len = strlen(key);
+	char number[sizeof("0xffffffff")];
+	size_t len;
+
+	while ((arg = strstr(arg, key))) {
+		if (arg == args || arg[-1] == ' ') {
+			arg += key_len;
+			len = strcspn(arg, " ");
+			if (!len || len >= sizeof(number))
+				return -EINVAL;
+			memcpy(number, arg, len);
+			number[len] = '\0';
+			return kstrtou32(number, 0, value);
+		}
+		arg += key_len;
+	}
+
+	return -ENOENT;
+}
+
+static const char *cnss_renoir_bdf_name(struct cnss_plat_data *plat_priv)
+{
+	struct device_node *chosen;
+	const char *args, *name = NULL;
+	u32 project, hwid;
+
+	if (plat_priv->device_id != QCA6490_DEVICE_ID)
+		return NULL;
+
+	chosen = of_find_node_by_path("/chosen");
+	if (!chosen)
+		return NULL;
+
+	if (of_property_read_string(chosen, "bootargs", &args) ||
+	    cnss_read_bootarg_u32(args, "hwid.project=", &project) ||
+	    project != XIAOMI_PROJECT_K9 ||
+	    cnss_read_bootarg_u32(args, "hwid.hwid_value=", &hwid))
+		goto out;
+
+	switch (hwid >> XIAOMI_HWID_COUNTRY_SHIFT) {
+	case XIAOMI_COUNTRY_GLOBAL:
+		name = "bd_k9gl.elf";
+		break;
+	case XIAOMI_COUNTRY_JAPAN:
+		name = "bd_k9jp.elf";
+		break;
+	default:
+		name = "bd_k9.elf";
+		break;
+	}
+out:
+	of_node_put(chosen);
+	return name;
+}
+
 static int cnss_get_bdf_file_name(struct cnss_plat_data *plat_priv,
 				  u32 bdf_type, char *filename,
 				  u32 filename_len)
 {
 	char filename_tmp[MAX_FIRMWARE_NAME_LEN];
+	const char *renoir_bdf;
 	int ret = 0;
 
 	switch (bdf_type) {
@@ -891,7 +957,10 @@ static int cnss_get_bdf_file_name(struct cnss_plat_data *plat_priv,
 				    filename_tmp, filename_len);
 		/* Board ID will be equal or less than 0xFF in GF mask case */
 		} else if (plat_priv->board_info.board_id == 0xFF) {
-			if (plat_priv->chip_info.chip_id & CHIP_ID_GF_MASK)
+			renoir_bdf = cnss_renoir_bdf_name(plat_priv);
+			if (renoir_bdf)
+				strscpy(filename_tmp, renoir_bdf, filename_len);
+			else if (plat_priv->chip_info.chip_id & CHIP_ID_GF_MASK)
 				snprintf(filename_tmp, filename_len,
 					 ELF_BDF_FILE_NAME_GF);
 			else
